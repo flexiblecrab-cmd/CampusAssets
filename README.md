@@ -23,18 +23,14 @@ Code based on CampusAssets practical code walkthrough with same ideas
 A `Loan` holds `BorrowerId` and `EquipmentId` (foreign keys). Deleting a borrower
 or equipment that still has loans is blocked (`DeleteBehavior.Restrict`).
 
-## 1. Put it in your existing CampusAssets project
+## 1. Under existing CampusAssets project
 
-Back up the folder first. Then, in `C:\Users\Dell Inspiron\Documents\CampusAssets`:
-
-1. Delete the files from the previous version: the `Models`, `Data` and `Services`
+1. Deleted the files from the previous version: the `Models`, `Data` and `Services`
    folders (if present), the old `Program.cs`, and any old `EquipmentLoan.cs`
    or `CampusAssetContext.cs`.
-2. Delete the whole `Migrations` folder.
-3. Delete `campus-assets.db` and `campus-loans.db` (the table design changed).
-4. Copy the files from this folder (`.cs` files) into the project folder.
-
-You already have the Sqlite and Design packages, so nothing new to install.
+2. Deleted the whole `Migrations` folder.
+3. Deleted `campus-assets.db` and `campus-loans.db` (the table design changed).
+4. Copied the files from this folder (`.cs` files) into the project folder.
 
 ## 2. Migration 1: InitialCreate
 
@@ -62,10 +58,10 @@ dotnet ef database update
 dotnet ef migrations add AddLoanReturnDate
 ```
 
-   `Up` should contain only one `AddColumn<DateTime>` for `ReturnedAt` on `Loans`,
+   `Up` contains only one `AddColumn<DateTime>` for `ReturnedAt` on `Loans`,
    with `nullable: true`.
 
-4. Apply it and confirm both migrations:
+4. Applied and confirm both migrations:
 
 ```
 dotnet ef database update
@@ -96,11 +92,7 @@ Search: borrower contains 'maria', still out
 Deleted the sample loan, equipment and borrower.
 ```
 
-A line starting with `PROBLEM:` means a rule that should reject was accepted.
 Record the `Schema version` line as your schema version.
-
-To see `ReturnedAt` filled in: comment out the three `Delete...` lines near the end
-of `Program.cs`, run once, and open `campus-assets.db` in DB Browser for SQLite.
 
 ## 5. How each requirement is met
 
@@ -119,8 +111,6 @@ of `Program.cs`, run once, and open `campus-assets.db` in DB Browser for SQLite.
 
 ## 6. Changing from SQLite to SQL Server
 
-Only the provider and the connection string change. The entities and the service stay the same.
-
 1. Install the SQL Server package:
    ```
    dotnet add package Microsoft.EntityFrameworkCore.SqlServer
@@ -136,11 +126,11 @@ Only the provider and the connection string change. The entities and the service
 | Method | `UseSqlite("Data Source=campus-assets.db")` | `UseSqlServer("Server=...;Database=...;...")` |
 | Login | none (a file) | `Trusted_Connection=True` or `User Id=...;Password=...` |
 
-3. Regenerate the migrations. The SQLite migration files contain SQLite-specific
+3. Regenerated the migrations. The SQLite migration files contain SQLite-specific
    details, so do not reuse them. Move the `Migrations` folder away, then run
    `dotnet ef migrations add InitialCreate`, enable the `ReturnedAt` lines as in section 3,
    run `dotnet ef migrations add AddLoanReturnDate`, then `dotnet ef database update`.
-4. For a real server, have the administrator review a script instead:
+4. Incase of a real server, have the administrator review a script instead:
    ```
    dotnet ef migrations script --idempotent -o deploy.sql
    ```
