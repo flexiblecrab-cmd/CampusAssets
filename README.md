@@ -1,13 +1,14 @@
 # Campus Equipment Loan Data Access Layer
+# .NET Fundamentals Topic 3
 
-As per CampusAssets practical code walkthrough with same ideas
+Code based on CampusAssets practical code walkthrough with same ideas
 (entity classes, a DbContext, SQLite, async CRUD, migrations) and grows
 `EquipmentLoan` into three related tables.
 
 ## Files
 
 | File | What it is |
-|---|---|
+
 | `Borrower.cs`, `Equipment.cs`, `Loan.cs` | The three entities (tables) |
 | `LoanReport.cs` | A small shape for search results (projection) |
 | `CampusAssetContext.cs` | The DbContext: tables, required fields, keys, relationships |
@@ -104,7 +105,7 @@ of `Program.cs`, run once, and open `campus-assets.db` in DB Browser for SQLite.
 ## 5. How each requirement is met
 
 | Requirement | Where |
-|---|---|
+
 | 3+ related entities, keys, relationships | `Borrower`, `Equipment`, `Loan`; `OnModelCreating` |
 | DbContext with explicit configuration, required fields | `CampusAssetContext.cs` (`IsRequired`, `HasMaxLength`, `HasIndex`, `HasOne/WithMany`) |
 | Async CRUD | `LoanService` methods ending in `Async` |
@@ -130,7 +131,7 @@ Only the provider and the connection string change. The entities and the service
    ```
 
 | | SQLite (development) | SQL Server (deployment) |
-|---|---|---|
+
 | Package | `Microsoft.EntityFrameworkCore.Sqlite` | `Microsoft.EntityFrameworkCore.SqlServer` |
 | Method | `UseSqlite("Data Source=campus-assets.db")` | `UseSqlServer("Server=...;Database=...;...")` |
 | Login | none (a file) | `Trusted_Connection=True` or `User Id=...;Password=...` |
@@ -153,7 +154,7 @@ Only the provider and the connection string change. The entities and the service
 
 ## Troubleshooting
 
-- **table already exists:** delete the `.db` file and run `dotnet ef database update`.
-- **A migration named InitialCreate already exists:** the old `Migrations` folder was not deleted.
-- **Pending model changes:** you edited a model class without adding a migration.
-- **dotnet ef not found:** close and reopen the terminal.
+- **table already exists:**
+- **A migration named InitialCreate already exists:** 
+- **Pending model changes:** 
+- **dotnet ef not found:**
