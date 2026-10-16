@@ -1,0 +1,106 @@
+Test Plan: Campus Equipment Loan Data Access Layer
+
+1. Scope and environment
+
+| Item | Value |
+
+| Project | CampusAssets (EF Core data access layer) |
+| Database (development) | SQLite file `campus-assets.db` |
+| Schema version tested | `20261012163440_AddLoanReturnDate` (last applied migration, printed by the program) |
+| Migrations | `InitialCreate`, `AddLoanReturnDate` |
+| How tests run | `dotnet run` executes `Program.cs`, which acts as the test driver. Expected rejections are checked by the helper `ExpectErrorAsync`. A line starting with `PROBLEM:` means a test failed. |
+
+2. Test cases
+
+Status values: **Pass** = observed in a real run. **Not yet run** = test is defined but the result has not been recorded; run it using section 4 and update the row.
+
+2.1 Migrations and schema
+
+| ID | Requirement | Steps | Expected result | Status |
+
+| T01 | Two migrations exist | Run `dotnet ef migrations list` | Lists `InitialCreate` and `AddLoanReturnDate` | Not yet run (capture the terminal output) |
+| T02 | Migrations applied, not EnsureCreated | Run `dotnet run` | First line prints `Schema version: ..._AddLoanReturnDate` | **Pass** |
+| T03 | Running again on an up-to-date database is safe | Run `dotnet run` a second time | No error; same schema version | **Pass** |
+| T04 | Migration 2 adds only a column | Open `Migrations\..._AddLoanReturnDate.cs`, read `Up` | One `AddColumn` for `ReturnedAt` (nullable); no `DropTable` or `DropColumn` | Not yet run (capture the file) |
+
+2.2 Create, Read, Update, Delete
+
+| ID | Requirement | Steps | Expected result | Status |
+
+| T05 | Create borrower, equipment, loan | Demo: `AddBorrowerAsync`, `AddEquipmentAsync`, `CheckOutAsync` | Prints `Created borrower N, equipment N, loan N.` | **Pass** |
+| T06 | Read (search) active loan | `SearchLoansAsync(borrowerName: "maria", isReturned: false)` | One loan listed, "still out" | **Pass** |
+| T07 | Update borrower | `UpdateBorrowerNameAsync` to "Maria Santos-Reyes" | New name appears in later search | **Pass** |
+| T08 | Update loan (return) | `ReturnLoanAsync` | Loan appears as "returned" | **Pass** |
+| T09 | Delete loan, equipment, borrower | `DeleteLoanAsync`, `DeleteEquipmentAsync`, `DeleteBorrowerAsync` | Prints `Deleted the sample loan, equipment and borrower.` | **Pass** |
+| T10 | `ReturnedAt` value is stored | Comment out the three `Delete...` calls, run once, open `campus-assets.db` in DB Browser for SQLite | `ReturnedAt` holds a date for the returned loan | Not yet run |
+
+2.3 Search
+
+| ID | Requirement | Steps | Expected result | Status |
+
+| T11 | Search by borrower (case-insensitive) | `borrowerName: "maria"` against stored "Maria Santos" | Loan found | **Pass** (after the `ToLower()` fix) |
+| T12 | Search by equipment and date range | `equipmentName: "laptop"`, `borrowedFrom` and `borrowedTo` = today | Loan found | **Pass** |
+| T13 | Search by return status | `borrowerName: "santos", isReturned: true` | Returned loan found | **Pass** |
+| T14 | Invalid date range rejected | `borrowedFrom` later than `borrowedTo` | `ArgumentException`: "The 'from' date cannot be after the 'to' date." | Not yet run |
+
+2.4 Validation and business rules
+
+| ID | Requirement | Steps | Expected result | Status |
+
+| T15 | Empty borrower name rejected | `AddBorrowerAsync("   ", ...)` | "Full name is required." | **Pass** |
+| T16 | Invalid email rejected | `AddBorrowerAsync("Test Person", "not-an-email")` | "A valid email is required." | **Pass** |
+| T17 | Same equipment cannot be loaned twice | `CheckOutAsync` twice for the same item | "This equipment is already on loan." | **Pass** |
+| T18 | Borrower with loans cannot be deleted | `DeleteBorrowerAsync` while a loan exists | "This borrower has loans and cannot be deleted." | **Pass** |
+| T19 | Duplicate email rejected | `AddBorrowerAsync` with an existing email | "A borrower with this email already exists." | Not yet run |
+| T20 | Duplicate asset tag rejected | `AddEquipmentAsync` with an existing tag | "This asset tag already exists." | Not yet run |
+| T21 | Equipment with loans cannot be deleted | `DeleteEquipmentAsync` while a loan exists | "This equipment has loans and cannot be deleted." | Not yet run |
+| T22 | Active loan cannot be deleted | `DeleteLoanAsync` before returning | "Return the equipment before deleting the loan." | Not yet run |
+| T23 | Loan cannot be returned twice | `ReturnLoanAsync` twice | "This loan was already returned." | Not yet run |
+
+2.5 Transactions and error handling
+
+| ID | Requirement | Steps | Expected result | Status |
+
+| T24 | Failed checkout saves nothing | `CheckOutAsync(99999, equipmentId)` (borrower does not exist) | "Borrower not found."; no new loan in the database | Not yet run |
+| T25 | Errors are caught, not crashes | Any rejected call inside `try/catch` in `Program.cs` | Friendly message printed; program continues or ends cleanly | **Pass** |
+
+### 2.6 Provider change
+
+| ID | Requirement | Steps | Expected result | Status |
+
+| T26 | SQL Server switch is documented | Read README section 6 | Package, `UseSqlServer(...)` line, connection string, and "regenerate migrations" step are listed | **Pass** (documentation reviewed) |
+| T27 | Program runs on SQL Server | Follow README section 6 against SQL Server Express or LocalDB | Same output as SQLite | Not yet run (optional; state clearly if untested) |
+
+3. Results summary
+
+Observed runs on 12 and 13 October 2026: T02, T03, T05 to T09, T11 to T13, T15 to T18, T25 and T26 passed. The first search run failed (T11 to T13 returned no results) because `Contains` is case-sensitive in SQLite; the search was changed to compare lowercase text, and the second run passed. Tests marked "Not yet run" are defined above and can be run with section 4.
+
+4. Optional extra checks (add to `Program.cs`)
+
+Paste these into `Program.cs` inside the `try` block, then run `dotnet run`. Each line must print `Rejected as expected`.
+
+After the existing "Delete a borrower who has loans" check (the loan is still active here):
+
+```csharp
+await ExpectErrorAsync("Duplicate email",
+    () => service.AddBorrowerAsync("Other Person", $"maria.{tag}@campus.edu"));
+await ExpectErrorAsync("Duplicate asset tag",
+    () => service.AddEquipmentAsync($"LAP-{tag}", "Another Laptop"));
+await ExpectErrorAsync("Delete equipment that has loans",
+    () => service.DeleteEquipmentAsync(equipmentId));
+await ExpectErrorAsync("Delete an active loan",
+    () => service.DeleteLoanAsync(loanId));
+await ExpectErrorAsync("Check out for an unknown borrower",
+    () => service.CheckOutAsync(99999, equipmentId));
+await ExpectErrorAsync("Search with 'from' after 'to'",
+    () => service.SearchLoansAsync(borrowedFrom: DateTime.UtcNow, borrowedTo: DateTime.UtcNow.AddDays(-2)));
+```
+
+Right after `await service.ReturnLoanAsync(loanId);`:
+
+```csharp
+await ExpectErrorAsync("Return the same loan twice",
+    () => service.ReturnLoanAsync(loanId));
+```
+
+
